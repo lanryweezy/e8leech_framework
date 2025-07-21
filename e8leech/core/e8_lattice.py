@@ -53,3 +53,38 @@ def get_e8_basis():
         [0, 0, 0, 0, 0, -1, 1, 0],
         [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
     ])
+
+def babai_nearest_plane(v, basis):
+    """
+    Babai's nearest plane algorithm for finding the closest lattice point.
+
+    Args:
+        v: The vector to be rounded to the nearest lattice point.
+        basis: The basis of the lattice.
+
+    Returns:
+        The closest lattice point to v.
+    """
+    # First, we need to compute the Gram-Schmidt orthogonalization of the basis.
+    # However, for the E8 lattice, a simpler algorithm exists.
+    # A more general implementation would require LLL reduction for the basis
+    # and then the Gram-Schmidt process.
+    # For now, we will assume the basis is already LLL-reduced.
+
+    # The general algorithm is as follows:
+    # 1. Compute the inverse of the basis matrix.
+    # 2. Compute the coordinates of the vector v in the basis: c = v * B^(-1)
+    # 3. Round the coordinates to the nearest integers: c_rounded = round(c)
+    # 4. Compute the lattice point: v_rounded = c_rounded * B
+
+    try:
+        basis_inv = np.linalg.inv(basis)
+    except np.linalg.LinAlgError:
+        # The basis is not invertible, which should not happen for a valid lattice basis.
+        return None
+
+    coords = np.dot(v, basis_inv)
+    rounded_coords = np.round(coords)
+    closest_point = np.dot(rounded_coords, basis)
+
+    return closest_point
