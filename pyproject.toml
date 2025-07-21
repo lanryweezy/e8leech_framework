@@ -31,6 +31,7 @@ streamlit = "^1.11"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
+jupyter-book = "^0.13"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

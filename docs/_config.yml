@@ -1,0 +1,20 @@
+# Book settings
+title: E8Leech Documentation
+author: The E8Leech Team
+logo: logo.png
+
+# Execution settings
+execute:
+  execute_notebooks: force
+
+# HTML-specific settings
+html:
+  favicon: favicon.ico
+  use_edit_page_button: true
+  use_repository_button: true
+  use_issues_button: true
+
+# Launch button settings
+launch_buttons:
+  binderhub_url: "https://mybinder.org"
+  thebe: true

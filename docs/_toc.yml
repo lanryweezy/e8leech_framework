@@ -1,0 +1,13 @@
+- file: intro
+- part: Research
+  chapters:
+  - file: research/mathematical_basis
+  - file: research/e8_comparison
+  - file: research/quantum_advantage
+  - file: research/symmetry_visualization
+- part: Developer
+  chapters:
+  - file: developer/quickstart
+  - file: developer/api_reference
+  - file: developer/tutorial
+  - file: developer/performance_tuning
