@@ -48,5 +48,42 @@ class TestData(unittest.TestCase):
         for i, n in enumerate(neighbors):
             self.assertIn(i, n)
 
+    def test_sphere_packing(self):
+        """
+        Tests the sphere packing density calculation.
+        """
+        from e8leech.data.sphere_packing import get_packing_density
+        from e8leech.core.e8_lattice import get_e8_basis
+
+        basis = get_e8_basis()
+        density = get_packing_density(basis)
+        self.assertAlmostEqual(density, 0.25367, places=5)
+
+    def test_error_correction(self):
+        """
+        Tests the error correction code.
+        """
+        from e8leech.data.error_correction import encode, decode
+
+        data = np.array([1, 2, 3, 4, 5, 6, 7, 8])
+        encoded_data = encode(data)
+
+        # Add some noise to the encoded data.
+        noise = np.random.normal(0, 0.1, encoded_data.shape)
+        received_data = encoded_data + noise
+
+        decoded_data = decode(received_data)
+        self.assertTrue(np.allclose(data, decoded_data))
+
+    def test_dimensionality_reduction(self):
+        """
+        Tests the dimensionality reduction function.
+        """
+        from e8leech.data.dimensionality import project_to_subspace
+
+        data = np.random.rand(100, 8)
+        projected_data = project_to_subspace(data, 4)
+        self.assertEqual(projected_data.shape, (100, 4))
+
 if __name__ == '__main__':
     unittest.main()
