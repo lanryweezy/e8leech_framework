@@ -1,5 +1,9 @@
 import numpy as np
+from numba import jit
+from functools import lru_cache
 
+@lru_cache(maxsize=None)
+@jit(nopython=True)
 def generate_e8_roots():
     """
     Generates the 240 root vectors of the E8 lattice.
@@ -11,7 +15,8 @@ def generate_e8_roots():
     - 128 roots of the form (±1/2, ±1/2, ±1/2, ±1/2, ±1/2, ±1/2, ±1/2, ±1/2)
       where the number of negative signs is even.
     """
-    roots = []
+    roots = np.zeros((240, 8))
+    k = 0
 
     # Type 1: 112 roots with two non-zero elements (±1)
     for i in range(8):
@@ -20,7 +25,8 @@ def generate_e8_roots():
                 v = np.zeros(8)
                 v[i] = signs[0]
                 v[j] = signs[1]
-                roots.append(v)
+                roots[k] = v
+                k += 1
 
     # Type 2: 128 roots with all elements being ±1/2
     for i in range(2**8):
@@ -34,9 +40,10 @@ def generate_e8_roots():
                 neg_count += 1
 
         if neg_count % 2 == 0:
-            roots.append(v)
+            roots[k] = v
+            k += 1
 
-    return np.array(roots)
+    return roots
 
 def get_e8_basis():
     """
@@ -54,6 +61,7 @@ def get_e8_basis():
         [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
     ])
 
+@jit(nopython=True)
 def babai_nearest_plane(v, basis):
     """
     Babai's nearest plane algorithm for finding the closest lattice point.
@@ -77,12 +85,9 @@ def babai_nearest_plane(v, basis):
     # 3. Round the coordinates to the nearest integers: c_rounded = round(c)
     # 4. Compute the lattice point: v_rounded = c_rounded * B
 
-    try:
-        basis_inv = np.linalg.inv(basis)
-    except np.linalg.LinAlgError:
-        # The basis is not invertible, which should not happen for a valid lattice basis.
-        return None
-
+    # Numba does not support try...except blocks for specific exception types.
+    # We will assume the basis is invertible.
+    basis_inv = np.linalg.inv(basis)
     coords = np.dot(v, basis_inv)
     rounded_coords = np.round(coords)
     closest_point = np.dot(rounded_coords, basis)

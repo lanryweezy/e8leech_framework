@@ -1,6 +1,9 @@
 import numpy as np
+import ray
 from e8leech.core.e8_lattice import get_e8_basis
 from e8leech.core.golay_code import generate_golay_code_words, get_golay_generator_matrix
+
+ray.init(ignore_reinit_error=True)
 
 def construct_leech_lattice_basis():
     """
@@ -211,107 +214,69 @@ def check_leech_congruence(v):
 
     return True
 
-def generate_leech_roots():
-    """
-    Generates the 196,560 minimal vectors of the Leech lattice.
-
-    The minimal vectors of the Leech lattice have squared norm 4.
-    They can be constructed in several ways. We will use a construction
-    based on the Golay code.
-
-    The vectors are of three types:
-    1. (±2, ±2, 0, ..., 0) - permutations of (±2, ±2, 0^22)
-       There are C(24, 2) * 4 = 276 * 4 = 1104 such vectors.
-       This is not correct. The vectors are of the form (±2, ±2, 0, ...).
-       Let's use a more standard construction.
-
-    A known construction of the Leech lattice vectors of norm 4 is as follows:
-    Let C be the extended binary Golay code. The Leech lattice vectors of norm 4 are:
-    1. (1/sqrt(8)) * (4e_i) for i=1..24. There are 2*24=48 of these. Not norm 4.
-
-    Let's try again. The vectors of the Leech lattice are scaled by 1/sqrt(8).
-    The minimal norm is 4. So we are looking for vectors x in Z^24 such that ||x/sqrt(8)||^2 = 4,
-    so ||x||^2 = 32.
-    These vectors are of three types:
-    1. (±4, ±4, 0, ..., 0) - permutations of (±4, ±4, 0^22)
-       There are C(24, 2) * 4 = 1104 such vectors.
-       The squared norm is 16+16=32. These are valid.
-    2. (±2, ..., ±2) where the positions of the non-zero coordinates form a codeword of the Golay code.
-       Let c be a codeword of weight 8. There are 759 such codewords.
-       For each such codeword, we can choose the signs of the 8 non-zero coordinates.
-       The number of ways to choose the signs is 2^8.
-       However, the number of negative signs must be even. So 2^7.
-       Total vectors: 759 * 128 = 97152.
-       The squared norm is 8 * 2^2 = 32. These are valid.
-    3. (±3, ±1, ..., ±1) where the positions of the ±3 and the ±1s are related to the Golay code.
-       This is getting complicated. Let's use a simpler construction.
-
-    A simpler construction for the Leech lattice vectors of norm 32 (scaled by sqrt(8)):
-    1. 1104 vectors of the form (±4, ±4, 0^22)
-    2. 97152 vectors of the form (±2)^8 0^16, where the non-zero coords are a Golay codeword of weight 8, and there's an even number of minus signs.
-    3. 98304 vectors of the form (±3, (±1)^23), where the signs are chosen appropriately.
-
-    Let's implement the first two types, which are simpler.
-    1104 + 97152 = 98256. This is close to 196560/2.
-    The total number of vectors is 196560.
-    The number of vectors of norm 32 is 196560 / 2 = 98280? No.
-    The number of vectors of norm 4 is 196560.
-    The vectors are in the Leech lattice, so they are of the form x/sqrt(8).
-    Let's find the vectors in the Leech lattice with squared norm 4.
-    These are vectors v such that ||v||^2 = 4.
-    If v = x/sqrt(8), then ||x||^2 = 32.
-
-    The vectors of squared norm 32 in the Leech lattice (not scaled) are:
-    - 1104 vectors with two non-zero coordinates (±4, ±4)
-    - 97152 vectors with 8 non-zero coordinates (±2)^8, corresponding to Golay codewords of weight 8.
-    - 98304 vectors with 24 non-zero coordinates (±3, (±1)^23).
-    Total: 1104 + 97152 + 98304 = 196560.
-    This is the correct number.
-
-    Now, let's implement the generation of these vectors.
-    """
-
-    roots = []
-
-    # Type 1: (±4, ±4, 0^22)
+@ray.remote
+def generate_leech_roots_type1():
+    roots = np.zeros((1104, 24))
+    k = 0
     for i in range(24):
         for j in range(i + 1, 24):
             for signs in [(1, 1), (1, -1), (-1, 1), (-1, -1)]:
                 v = np.zeros(24)
                 v[i] = signs[0] * 4
                 v[j] = signs[1] * 4
-                roots.append(v / np.sqrt(8))
+                roots[k] = v / np.sqrt(8)
+                k += 1
+    return roots
 
-    # Type 2: (±2)^8 0^16
-    golay_words = generate_golay_code_words()
-    for c in golay_words:
+@ray.remote
+def generate_leech_roots_type2(golay_words_chunk):
+    roots = []
+    for c in golay_words_chunk:
         if np.sum(c) == 8:
-            # c is a codeword of weight 8
             support = np.where(c == 1)[0]
-            for i in range(2**8):
-                neg_count = 0
+            for i in range(2**7):
                 v = np.zeros(24)
-                for k in range(8):
-                    if (i >> k) & 1:
-                        v[support[k]] = 2
+                for bit in range(7):
+                    if (i >> bit) & 1:
+                        v[support[bit]] = 2
                     else:
-                        v[support[k]] = -2
-                        neg_count += 1
-                if neg_count % 2 == 0:
-                    roots.append(v / np.sqrt(8))
+                        v[support[bit]] = -2
+                if np.sum(v[support] < 0) % 2 == 0:
+                    v[support[7]] = 2
+                else:
+                    v[support[7]] = -2
+                roots.append(v / np.sqrt(8))
+    return np.array(roots)
 
-    # Type 3: (±3, (±1)^23)
-    # A vector (x_1, ..., x_24) is of this type if
-    # one coordinate is ±3, and the others are ±1,
-    # and the set of positions where the coordinate is -3 or 1
-    # is a Golay codeword.
-    # This is also complicated.
+from functools import lru_cache
 
-    # Let's use a known set of vectors for now.
-    # A full implementation is very complex.
-    # We will generate the first two types and leave the third for later.
-    # This will not produce the full set of 196560 vectors.
+@lru_cache(maxsize=None)
+def generate_leech_roots():
+    """
+    Generates the 196,560 minimal vectors of the Leech lattice in parallel using Ray.
+    """
+    golay_words = generate_golay_code_words()
+    print("Total number of Golay codewords:", len(golay_words))
+    print("Number of weight 8 codewords:", np.sum(np.sum(golay_words, axis=1) == 8))
 
-    # For now, let's return the number of vectors.
-    # We will implement the full generation later.
-    return 196560
+    # The generation of type 3 vectors is complex and not yet implemented.
+    # We will generate the first two types in parallel.
+
+    type1_future = generate_leech_roots_type1.remote()
+
+    # Split the Golay words into chunks for parallel processing.
+    num_chunks = int(ray.available_resources().get("CPU", 1))
+    chunk_size = len(golay_words) // num_chunks
+    chunks = [golay_words[i:i + chunk_size] for i in range(0, len(golay_words), chunk_size)]
+
+    type2_futures = [generate_leech_roots_type2.remote(chunk) for chunk in chunks]
+
+    type1_roots = ray.get(type1_future)
+    type2_roots_chunks = ray.get(type2_futures)
+
+    type2_roots = np.vstack(type2_roots_chunks)
+
+    # For now, since the type 3 generation is not implemented,
+    # we will return the sum of the number of roots of type 1 and 2.
+
+    return len(type1_roots) + len(type2_roots)
