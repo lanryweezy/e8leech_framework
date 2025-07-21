@@ -1,1 +1,30 @@
-# Placeholder for pyproject.toml
+[tool.poetry]
+name = "e8leech"
+version = "0.1.0"
+description = "A library for E8 and Leech lattice operations, with applications in cryptography, AI, and physics."
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.21"
+torch = "^1.10"
+onnx = "^1.10"
+onnxruntime = "^1.10"
+dask = {extras = ["complete"], version = "^2022.2.0"}
+ray = {extras = ["default"], version = "^1.9"}
+scipy = "^1.7"
+pycryptodome = "^3.12"
+matplotlib = "^3.5"
+plotly = "^5.5"
+scikit-learn = "^1.0"
+cupy-cuda11x = "^13.5.1"
+numba = "0.60.0"
+llvmlite = "0.43.0"
+torch-geometric = "^2.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
