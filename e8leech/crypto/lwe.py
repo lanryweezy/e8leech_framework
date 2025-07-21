@@ -1,4 +1,7 @@
 import numpy as np
+import logging
+
+logging.basicConfig(level=logging.INFO, filename='crypto_audit.log', format='%(asctime)s - %(message)s')
 
 class LWE:
     """
@@ -22,12 +25,14 @@ class LWE:
         """
         Generates a secret key.
         """
+        logging.info("Generating LWE secret key.")
         return np.random.randint(0, self.q, size=self.n)
 
     def _generate_public_key(self):
         """
         Generates a public key.
         """
+        logging.info("Generating LWE public key.")
         A = np.random.randint(0, self.q, size=(self.n, self.n))
         e = np.random.normal(0, self.std_dev, size=self.n).astype(int)
         b = (A @ self.secret_key + e) % self.q
@@ -37,6 +42,7 @@ class LWE:
         """
         Encrypts a single bit message.
         """
+        logging.info(f"Encrypting message with LWE.")
         if message not in [0, 1]:
             raise ValueError("Message must be 0 or 1.")
 
@@ -50,6 +56,7 @@ class LWE:
         """
         Decrypts a ciphertext.
         """
+        logging.info(f"Decrypting ciphertext with LWE.")
         u, v = ciphertext
         decrypted_val = (v - self.secret_key @ u) % self.q
         return 0 if decrypted_val < self.q / 2 else 1

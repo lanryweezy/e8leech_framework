@@ -1,5 +1,8 @@
 import numpy as np
 from hashlib import sha256
+import logging
+
+logging.basicConfig(level=logging.INFO, filename='crypto_audit.log', format='%(asctime)s - %(message)s')
 
 class BLISS:
     """
@@ -16,6 +19,7 @@ class BLISS:
         """
         Generates a private and public key pair.
         """
+        logging.info("Generating BLISS keys.")
         # For simplicity, we'll use a random private key.
         # A real implementation would use a more secure method.
         private_key = np.random.randint(-1, 2, size=self.n)
@@ -30,6 +34,7 @@ class BLISS:
         """
         Signs a message.
         """
+        logging.info(f"Signing message with BLISS.")
         # This is a simplified signing process.
         # A full implementation is more complex.
         hashed_message = sha256(message.encode()).hexdigest()
@@ -46,6 +51,7 @@ class BLISS:
         """
         Verifies a signature.
         """
+        logging.info(f"Verifying signature with BLISS.")
         z, c = signature
 
         # Recompute hash

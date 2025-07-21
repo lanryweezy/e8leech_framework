@@ -21,6 +21,13 @@ cupy-cuda11x = "^13.5.1"
 numba = "0.60.0"
 llvmlite = "0.43.0"
 torch-geometric = "^2.0"
+fastapi = "^0.78"
+uvicorn = "^0.18"
+boto3 = "^1.24"
+amazon-braket-sdk = "^1.30"
+azure-quantum = "^0.25"
+click = "^8.1"
+streamlit = "^1.11"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
