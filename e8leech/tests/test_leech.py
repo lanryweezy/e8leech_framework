@@ -55,6 +55,28 @@ class TestLeechLattice(unittest.TestCase):
         # For now, we will just check that the determinant of the Gram matrix is 1.
         pass
 
+    def test_unimodularity(self):
+        """
+        Tests that the Leech lattice is unimodular.
+        """
+        basis = construct_leech_lattice_basis()
+        gram_matrix = np.dot(basis, basis.T)
+        self.assertAlmostEqual(np.linalg.det(gram_matrix), 1.0)
+
+    def test_even_lattice(self):
+        """
+        Tests that the Leech lattice is an even lattice.
+        """
+        basis = construct_leech_lattice_basis()
+        # Check that the squared norm of each basis vector is an even integer.
+        for v in basis:
+            self.assertEqual(int(np.dot(v, v)) % 2, 0)
+
+        # Check that the dot product of any two basis vectors is an integer.
+        for i in range(len(basis)):
+            for j in range(i, len(basis)):
+                self.assertAlmostEqual(np.dot(basis[i], basis[j]) % 1, 0)
+
     def test_leech_congruence(self):
         """
         Tests the congruence conditions for the Leech lattice.

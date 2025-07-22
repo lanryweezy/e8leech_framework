@@ -1,5 +1,7 @@
 import unittest
 import numpy as np
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
 from e8leech.core.e8_lattice import generate_e8_roots, get_e8_basis, babai_nearest_plane
 
 class TestE8Lattice(unittest.TestCase):
@@ -58,6 +60,42 @@ class TestE8Lattice(unittest.TestCase):
 
         packing_density = volume_sphere / volume_parallelepiped
         self.assertAlmostEqual(packing_density, 0.25367, places=5)
+
+from hypothesis import settings
+
+    @settings(max_examples=10)
+    @given(arrays(np.float64, (8,)))
+    def test_babai_property(self, v):
+        """
+        Tests a property of Babai's nearest plane algorithm.
+        The distance between a vector and its quantization should be less than
+        the distance between the vector and any other lattice point.
+        """
+        basis = get_e8_basis()
+        q_v = babai_nearest_plane(v, basis)
+
+        # Generate another lattice point.
+        c = np.random.randint(-10, 10, 8)
+        other_lattice_point = np.dot(c, basis)
+
+        if not np.allclose(q_v, other_lattice_point):
+            dist_to_quantized = np.linalg.norm(v - q_v)
+            dist_to_other = np.linalg.norm(v - other_lattice_point)
+            self.assertLessEqual(dist_to_quantized, dist_to_other)
+
+    def test_even_lattice(self):
+        """
+        Tests that the E8 lattice is an even lattice.
+        """
+        basis = get_e8_basis()
+        # Check that the squared norm of each basis vector is an even integer.
+        for v in basis:
+            self.assertEqual(int(np.dot(v, v)) % 2, 0)
+
+        # Check that the dot product of any two basis vectors is an integer.
+        for i in range(len(basis)):
+            for j in range(i, len(basis)):
+                self.assertAlmostEqual(np.dot(basis[i], basis[j]) % 1, 0)
 
 if __name__ == '__main__':
     unittest.main()

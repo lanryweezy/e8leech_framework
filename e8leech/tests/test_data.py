@@ -4,10 +4,16 @@ from e8leech.data.quantization import quantize_to_e8, quantize_to_leech
 from e8leech.core.e8_lattice import get_e8_basis
 from e8leech.core.leech_lattice import construct_leech_lattice_basis
 from e8leech.data.lsh import LSH
+from hypothesis import given
+from hypothesis.extra.numpy import arrays
 
 class TestData(unittest.TestCase):
 
-    def test_quantize_to_e8(self):
+from hypothesis import settings
+
+    @settings(max_examples=10)
+    @given(arrays(np.float64, (10, 8)))
+    def test_quantize_to_e8(self, vectors):
         """
         Tests the quantization to the E8 lattice.
         """
@@ -20,11 +26,12 @@ class TestData(unittest.TestCase):
             coords = np.dot(q_v, np.linalg.inv(basis))
             self.assertTrue(np.allclose(coords, np.round(coords)))
 
-    def test_quantize_to_leech(self):
+    @settings(max_examples=10)
+    @given(arrays(np.float64, (10, 24)))
+    def test_quantize_to_leech(self, vectors):
         """
         Tests the quantization to the Leech lattice.
         """
-        vectors = np.random.rand(10, 24)
         q_vectors = quantize_to_leech(vectors)
         # The quantized vectors should be points in the Leech lattice.
         # We can check this by verifying that their coordinates in the Leech basis are integers.
