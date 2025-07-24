@@ -10,6 +10,8 @@ class LeechLattice(BaseLattice):
     def __init__(self):
         super().__init__(dimension=24)
         self.basis = self.construct_leech_lattice_basis()
+        if np.linalg.matrix_rank(self.basis) < self.dimension:
+            raise np.linalg.LinAlgError("Basis is not linearly independent")
         self.root_system = self.get_root_system()
 
     def construct_leech_lattice_basis(self):
@@ -44,7 +46,7 @@ class LeechLattice(BaseLattice):
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, -2, 0],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ])
-        return leech_basis / 2.0
+        return leech_basis / np.sqrt(8)
 
     def get_root_system(self):
         if self.root_system is not None:
