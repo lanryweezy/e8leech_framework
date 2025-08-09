@@ -4,8 +4,6 @@ from e8leech.core.e8_lattice import get_e8_basis
 from e8leech.core.golay_code import generate_golay_code_words, get_golay_generator_matrix
 from e8leech.core.base_lattice import BaseLattice
 
-ray.init(ignore_reinit_error=True)
-
 class LeechLattice(BaseLattice):
     def __init__(self):
         super().__init__(dimension=24)
@@ -115,6 +113,7 @@ class LeechLattice(BaseLattice):
         """
         Generates the 196,560 minimal vectors of the Leech lattice in parallel using Ray.
         """
+        ray.init(ignore_reinit_error=True)
         golay_words = generate_golay_code_words()
         print("Total number of Golay codewords:", len(golay_words))
         print("Number of weight 8 codewords:", np.sum(np.sum(golay_words, axis=1) == 8))

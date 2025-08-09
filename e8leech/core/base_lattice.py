@@ -40,11 +40,7 @@ class BaseLattice:
         """
         Solves the closest vector problem (CVP) for the given vector.
         """
-        if self.basis is None:
-            return None
-
-        from e8leech.core.cvp import kannan_fincke_pohst
-        return kannan_fincke_pohst(v, self.basis)
+        raise NotImplementedError("The CVP algorithm is not yet implemented.")
 
     def quantize(self, v):
         """
