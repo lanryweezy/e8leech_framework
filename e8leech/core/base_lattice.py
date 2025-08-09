@@ -13,14 +13,9 @@ class BaseLattice:
         if self.basis is None:
             return
 
-        from fpylll import IntegerMatrix, LLL
+        from e8leech.core.lll import lll
 
-        if np.linalg.matrix_rank(self.basis) < self.dimension:
-            raise np.linalg.LinAlgError("Basis is not linearly independent")
-
-        M = IntegerMatrix.from_matrix(self.basis.astype(int).tolist())
-        reduced_basis = LLL.reduction(M)
-        return np.array([list(row) for row in reduced_basis])
+        return lll(self.basis)
 
     def is_valid(self, v):
         """

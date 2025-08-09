@@ -12,7 +12,7 @@ class LeechLattice(BaseLattice):
         self.basis = self.construct_leech_lattice_basis()
         if np.linalg.matrix_rank(self.basis) < self.dimension:
             raise np.linalg.LinAlgError("Basis is not linearly independent")
-        self.root_system = self.get_root_system()
+        self._root_system = None
 
     def construct_leech_lattice_basis(self):
         """
@@ -49,9 +49,67 @@ class LeechLattice(BaseLattice):
         return leech_basis / np.sqrt(8)
 
     def get_root_system(self):
-        if self.root_system is not None:
-            return self.root_system
-        return self.generate_leech_roots()
+        if self._root_system is None:
+            self._root_system = self.generate_leech_roots()
+        return self._root_system
+
+    def check_leech_congruence(self, v):
+        """
+        Checks if a vector satisfies the congruence conditions for the Leech lattice.
+
+        A vector v is in the Leech lattice if and only if v = x / (2*sqrt(2)) where
+        x is an integer vector in Z^24 satisfying:
+        1. All components of x have the same parity.
+        2. sum(x_i) = 0 (mod 8)
+        3. For each codeword c of the Golay code, sum_{i in supp(c)} x_i = 0 (mod 4)
+
+        This function checks a different set of congruence conditions:
+        x = y = z (mod 2E8) and x+y+z = 0 (mod 4E8)
+        where v = (x, y, z) is a 24-dimensional vector split into three 8-dimensional vectors.
+        This construction is known as Construction B.
+
+        Args:
+            v: The 24-dimensional vector to check.
+
+        Returns:
+            True if the vector satisfies the congruence conditions, False otherwise.
+        """
+
+        # We need to define what it means to be congruent to a lattice.
+        # x = y (mod 2E8) means (x-y) is in 2E8.
+        # 2E8 is the set of vectors {2u | u in E8}.
+
+        x = v[:8]
+        y = v[8:16]
+        z = v[16:24]
+
+        # We need a way to check if a vector is in the E8 lattice.
+        # A vector is in a lattice if it is an integer linear combination of the basis vectors.
+        # So, we need to solve the system of linear equations B*c = v, where B is the basis.
+        # If the solution c has integer components, then v is in the lattice.
+
+        e8_basis = get_e8_basis()
+
+        def is_in_e8(vec):
+            try:
+                coords = np.linalg.solve(e8_basis.T, vec)
+                return np.allclose(coords, np.round(coords))
+            except np.linalg.LinAlgError:
+                return False
+
+        # Check x = y (mod 2E8)
+        if not is_in_e8((x - y) / 2):
+            return False
+
+        # Check y = z (mod 2E8)
+        if not is_in_e8((y - z) / 2):
+            return False
+
+        # Check x+y+z = 0 (mod 4E8)
+        if not is_in_e8((x + y + z) / 4):
+            return False
+
+        return True
 
     def generate_leech_roots(self):
         """
