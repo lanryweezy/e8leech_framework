@@ -172,6 +172,3 @@ class LeechLattice(BaseLattice):
                     if np.sum(v[support] < 0) % 2 == 0:
                         v[support[7]] = 2
                     else:
-                        v[support[7]] = -2
-                    roots.append(v / np.sqrt(8))
-        return np.array(roots)
