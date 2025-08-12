@@ -280,3 +280,48 @@ def generate_leech_roots():
     # we will return the sum of the number of roots of type 1 and 2.
 
     return len(type1_roots) + len(type2_roots)
+
+from numba import jit
+
+from numba import jit
+
+@jit(nopython=True)
+def generate_leech_points(radius, basis):
+    """
+    Generates all Leech lattice points within a given radius of the origin.
+
+    Args:
+        radius: The radius to search within.
+        basis: The basis of the Leech lattice.
+
+    Returns:
+        A numpy array of the Leech lattice points.
+    """
+
+    # We will use a breadth-first search to find all points within the radius.
+
+    origin = np.zeros(24)
+    points = {tuple(origin)}
+    queue = [origin]
+
+    head = 0
+    while head < len(queue):
+        p = queue[head]
+        head += 1
+
+        for b in basis:
+            new_p = p + b
+            if np.dot(new_p, new_p) <= radius**2:
+                new_p_tuple = tuple(new_p)
+                if new_p_tuple not in points:
+                    points.add(new_p_tuple)
+                    queue.append(new_p)
+
+            new_p = p - b
+            if np.dot(new_p, new_p) <= radius**2:
+                new_p_tuple = tuple(new_p)
+                if new_p_tuple not in points:
+                    points.add(new_p_tuple)
+                    queue.append(new_p)
+
+    return np.array([list(p) for p in points])

@@ -96,5 +96,17 @@ class TestLeechLattice(unittest.TestCase):
         v = np.concatenate([2 * e8_basis[0], np.zeros(16)])
         self.assertFalse(check_leech_congruence(v))
 
+    def test_generate_leech_points(self):
+        """
+        Tests the generate_leech_points function.
+        """
+        basis = construct_leech_lattice_basis()
+        points = generate_leech_points(2.1, basis)
+
+        # Check that all the generated points are in the Leech lattice.
+        for p in points:
+            coords = np.linalg.solve(basis.T, p)
+            self.assertTrue(np.allclose(coords, np.round(coords)))
+
 if __name__ == '__main__':
     unittest.main()
