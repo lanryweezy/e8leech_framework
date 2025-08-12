@@ -3,6 +3,7 @@ import numpy as np
 from hypothesis import given
 from hypothesis.extra.numpy import arrays
 from e8leech.core.e8_lattice import generate_e8_roots, get_e8_basis, babai_nearest_plane
+from hypothesis import settings
 
 class TestE8Lattice(unittest.TestCase):
 
@@ -60,8 +61,6 @@ class TestE8Lattice(unittest.TestCase):
 
         packing_density = volume_sphere / volume_parallelepiped
         self.assertAlmostEqual(packing_density, 0.25367, places=5)
-
-from hypothesis import settings
 
     @settings(max_examples=10)
     @given(arrays(np.float64, (8,)))
