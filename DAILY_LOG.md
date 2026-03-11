@@ -5,10 +5,13 @@
 - Goal is to transform the placeholder repo into a functional mathematical primitive for AI and Cryptography.
 - SUCCESS: Pushed initial framework structure to GitHub.
 - Research phase on E8 basis vectors has begun.
-
 - Mathematically defined the E8 coordinate system (all integers or all half-integers with even sum).
 - Created `core/lattices.py` with the initial `E8Lattice` class.
 - Identified the 240 root vectors of E8.
 - Roadmap updated: Phase 1 (Research) is ahead of schedule.
 - SUCCESS: Validated E8 root vector generation with `test_math.py` (240 roots found with norm^2 = 2.0).
 - Initialized `GolayCode` and `LeechLattice` class skeletons.
+- Researched Leech Lattice minimal vector types (196,560 vectors in 3 shapes).
+- Linked Leech construction to the Binary Golay Code [24,12,8].
+- Explored Cryptography applications: Lattice-based primitives like Kyber/ML-KEM for post-quantum security.
+- Planned AI use-case: Quantizing high-dimensional embeddings onto E8/Leech centroids for "Lattice Embedding Mapping" (LEM).
