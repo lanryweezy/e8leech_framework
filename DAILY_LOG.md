@@ -21,5 +21,6 @@
 - SUCCESS: Completed the Leech Lattice decoder (Day 5 Goal reached early).
 - STARTED: Domain Applications Phase (Day 6).
 - SUCCESS: Built `lem_prototype.py` for Lattice Embedding Mapping.
-- TESTED: Verified E8-based quantization of 8D embeddings with MSE calculation.
-- PLANNED: Scaling LEM to 24D using the Leech Lattice and testing on synthetic transformer-like embeddings.
+- TESTED: Verified Leech Lattice (24D) semantic proximity preservation. Similar vectors mapped to the same centroid.
+- CREATED: `core/crypto.py` with an E8-based Learning With Errors (LWE) keypair generation prototype.
+- RESEARCH: Successfully used E8 lattice points as structured error 'e' in the LWE equation `t = As + e`.
