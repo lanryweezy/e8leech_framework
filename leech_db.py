@@ -27,26 +27,32 @@ class LeechDB:
         return ",".join(map(str, np.round(centroid).astype(int)))
 
     def index_batch(self, labels, vectors):
-        print(f"Quantizing batch of {len(vectors)}...")
+        print(f"Quantizing batch of {len(vectors)}...", flush=True)
         centroids = self.leech.quantify_batch(vectors)
         
+        print("Writing to database...", flush=True)
         cursor = self.conn.cursor()
+        
+        # Optimize by grouping labels by bucket to minimize DB operations
+        bucket_data = {}
         for label, centroid in zip(labels, centroids):
             key = self._centroid_to_key(centroid)
+            if key not in bucket_data:
+                bucket_data[key] = []
+            bucket_data[key].append(label)
             
-            # Get existing labels
+        for key, new_labels in bucket_data.items():
             cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
             row = cursor.fetchone()
             
             if row:
                 existing = json.loads(row[0])
-                if label not in existing:
-                    existing.append(label)
-                    cursor.execute("UPDATE buckets SET labels = ? WHERE centroid_id = ?", 
-                                 (json.dumps(existing), key))
+                updated = list(set(existing + new_labels))
+                cursor.execute("UPDATE buckets SET labels = ? WHERE centroid_id = ?", 
+                             (json.dumps(updated), key))
             else:
                 cursor.execute("INSERT INTO buckets (centroid_id, labels) VALUES (?, ?)", 
-                             (key, json.dumps([label])))
+                             (key, json.dumps(new_labels)))
         
         self.conn.commit()
 
@@ -57,6 +63,42 @@ class LeechDB:
         cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
         row = cursor.fetchone()
         return json.loads(row[0]) if row else []
+
+    def query_neighborhood(self, vector):
+        """ 
+        Finds all labels in the nearest lattice point and all its neighbors.
+        Highly optimized using vectorized distance check against occupied buckets.
+        """
+        central_q = self.leech.quantify(vector)
+        
+        # 1. Get all occupied bucket keys from the DB
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT centroid_id FROM buckets")
+        rows = cursor.fetchall()
+        if not rows:
+            return []
+            
+        # Convert string keys back to numpy arrays
+        def key_to_arr(k):
+            return np.array([int(x) for x in k.split(",")])
+            
+        occupied_keys_arr = np.array([key_to_arr(row[0]) for row in rows])
+        
+        # 2. Vectorized distance check
+        diffs = occupied_keys_arr - central_q
+        dists_sq = np.sum(diffs**2, axis=1)
+        
+        # Leech minimal vectors have norm^2 = 32
+        # We also include distance 0 (the central bucket itself)
+        matching_indices = np.where((dists_sq < 33.0) & ((np.abs(dists_sq - 32.0) < 1e-5) | (dists_sq < 1e-5)))[0]
+        
+        results = []
+        for idx in matching_indices:
+            key = ",".join(map(str, occupied_keys_arr[idx]))
+            cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
+            results.extend(json.loads(cursor.fetchone()[0]))
+                    
+        return list(set(results))
 
     def close(self):
         self.conn.close()

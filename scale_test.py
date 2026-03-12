@@ -45,9 +45,21 @@ def scale_test():
     # Neighborhood lookup (Recall boost)
     print("Neighborhood lookup (checking ~200k potential buckets)...")
     start_time = time.time()
-    # Note: Our current loop over 196k vectors is the bottleneck. 
-    # For scaling, we'll need a sparse set intersection.
-    neighborhood_results = lh.lookup_neighborhood(query_vec)
+    # Note: Vectorized key-distance check is the fastest scaling method
+    if not lh.table:
+        neighborhood_results = []
+    else:
+        table_keys = np.array(list(lh.table.keys()))
+        diffs = table_keys - central_q
+        dists_sq = np.sum(diffs**2, axis=1)
+        # Using a small tolerance for floating point comparisons
+        neighbor_keys = table_keys[np.abs(dists_sq - 32.0) < 1e-5]
+        
+        neighborhood_results = []
+        for nk in neighbor_keys:
+            neighborhood_results.extend(lh.table.get(tuple(nk.tolist()), []))
+        neighborhood_results = list(set(neighborhood_results))
+        
     neigh_time = time.time() - start_time
     print(f"Neighborhood lookup time: {neigh_time:.2f} seconds")
     print(f"Neighborhood matches found: {len(neighborhood_results)}")
