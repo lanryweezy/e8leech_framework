@@ -257,3 +257,31 @@ class LeechLattice(Lattice):
         best_idx = np.argmin(dists_sq)
         
         return p_candidates[best_idx]
+
+    def quantify_batch(self, X):
+        """ 
+        Finds the closest points in the Leech Lattice for a batch of 24D vectors.
+        Highly optimized using matrix broadcasting.
+        """
+        if not hasattr(self, '_c2_cache'):
+            self._c2_cache = 2 * self.golay.get_all_codewords()
+            
+        # X is (N, 24), _c2_cache is (4096, 24)
+        # We process in chunks to manage memory overhead if N is large
+        N = X.shape[0]
+        chunk_size = 500
+        all_best_p = []
+        
+        for i in range(0, N, chunk_size):
+            chunk = X[i:i+chunk_size]
+            # broadcasting: (chunk_size, 1, 24) - (1, 4096, 24)
+            # This creates a (chunk_size, 4096, 24) tensor
+            p_candidates = 2 * np.round((chunk[:, np.newaxis, :] - self._c2_cache) / 4.0) * 2 + self._c2_cache
+            
+            # dists_sq: (chunk_size, 4096)
+            dists_sq = np.sum((chunk[:, np.newaxis, :] - p_candidates)**2, axis=2)
+            best_indices = np.argmin(dists_sq, axis=1)
+            
+            all_best_p.append(p_candidates[np.arange(len(chunk)), best_indices])
+            
+        return np.vstack(all_best_p)
