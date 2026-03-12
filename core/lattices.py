@@ -195,6 +195,49 @@ class LeechLattice(Lattice):
         super().__init__(24)
         self.golay = GolayCode()
 
+    def get_minimal_vectors(self):
+        """ 
+        Generates the 196,560 minimal vectors of norm 4.
+        """
+        minimal_vectors = []
+        
+        # Shape 1: (4, 4, 0^22) -> 1,104 vectors
+        for i in range(24):
+            for j in range(i + 1, 24):
+                for s1 in [4, -4]:
+                    for s2 in [4, -4]:
+                        v = np.zeros(24)
+                        v[i], v[j] = s1, s2
+                        minimal_vectors.append(v)
+        
+        # Get codewords for Shape 2 and 3
+        codewords = self.golay.get_all_codewords()
+        
+        # Shape 2: (2^8, 0^16) -> 97,152 vectors
+        # These are based on octads (weight 8 codewords)
+        octads = codewords[np.sum(codewords, axis=1) == 8]
+        for octad in octads:
+            indices = np.where(octad == 1)[0]
+            # There are 2^7 sign combinations such that sum of minus signs is even
+            for i in range(256):
+                signs = np.array([1 if (i >> j) & 1 == 0 else -1 for j in range(8)])
+                if np.sum(signs == -1) % 2 == 0:
+                    v = np.zeros(24)
+                    v[indices] = 2 * signs
+                    minimal_vectors.append(v)
+
+        # Shape 3: (3, 1^23) -> 98,304 vectors
+        for i in range(24):
+            for codeword in codewords:
+                v = np.array([1 if b == 0 else -1 for b in codeword], dtype=float)
+                if codeword[i] == 0:
+                    v[i] = -3
+                else:
+                    v[i] = 3
+                minimal_vectors.append(v)
+                
+        return np.array(minimal_vectors)
+
     def quantify(self, x):
         """ 
         Finds the closest point in the Leech Lattice to an arbitrary 24D vector x.
@@ -228,14 +271,8 @@ class LeechLattice(Lattice):
         best_dist = float('inf')
         best_p = None
         
-        # Vectorized check for speed
-        # p_candidates = 2 * np.round((x - 2 * codewords) / 4.0) * 2 + 2 * codewords
-        # In pure Python, we loop. To speed up density test, we use a smaller sample.
-        sample_size = 512 # Check 1/8th of codewords for the demo speed
-        indices = np.random.choice(len(codewords), sample_size, replace=False)
-        
-        for idx in indices:
-            c = codewords[idx]
+        # Check all codewords to ensure geometric accuracy for LSH
+        for c in codewords:
             p = 2 * np.round((x - 2 * c) / 4.0) * 2 + 2 * c
             d = np.linalg.norm(x - p)
             if d < best_dist:
