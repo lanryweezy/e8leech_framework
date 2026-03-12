@@ -28,10 +28,10 @@ class LeechDB:
 
     def index_batch(self, labels, vectors):
         print(f"Quantizing batch of {len(vectors)}...", flush=True)
+        # Handle single vector input if necessary
+        if len(vectors.shape) == 1:
+            vectors = vectors.reshape(1, -1)
         centroids = self.leech.quantify_batch(vectors)
-        
-        print("Writing to database...", flush=True)
-        cursor = self.conn.cursor()
         
         # Optimize by grouping labels by bucket to minimize DB operations
         bucket_data = {}
@@ -41,6 +41,7 @@ class LeechDB:
                 bucket_data[key] = []
             bucket_data[key].append(label)
             
+        cursor = self.conn.cursor()
         for key, new_labels in bucket_data.items():
             cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
             row = cursor.fetchone()
@@ -67,37 +68,32 @@ class LeechDB:
     def query_neighborhood(self, vector):
         """ 
         Finds all labels in the nearest lattice point and all its neighbors.
-        Highly optimized using vectorized distance check against occupied buckets.
+        Optimized by checking only buckets that exist in the database.
         """
         central_q = self.leech.quantify(vector)
-        
-        # 1. Get all occupied bucket keys from the DB
         cursor = self.conn.cursor()
-        cursor.execute("SELECT centroid_id FROM buckets")
-        rows = cursor.fetchall()
-        if not rows:
-            return []
-            
-        # Convert string keys back to numpy arrays
-        def key_to_arr(k):
-            return np.array([int(x) for x in k.split(",")])
-            
-        occupied_keys_arr = np.array([key_to_arr(row[0]) for row in rows])
         
+        # 1. Get all occupied bucket keys
+        cursor.execute("SELECT centroid_id FROM buckets")
+        keys = [row[0] for row in cursor.fetchall()]
+        if not keys:
+            return []
+
         # 2. Vectorized distance check
-        diffs = occupied_keys_arr - central_q
+        # We convert keys to arrays for math
+        key_arrays = np.array([[int(x) for x in k.split(",")] for k in keys])
+        diffs = key_arrays - central_q
         dists_sq = np.sum(diffs**2, axis=1)
         
-        # Leech minimal vectors have norm^2 = 32
-        # We also include distance 0 (the central bucket itself)
-        matching_indices = np.where((dists_sq < 33.0) & ((np.abs(dists_sq - 32.0) < 1e-5) | (dists_sq < 1e-5)))[0]
+        # Leech neighbors are distance sqrt(32) away. 
+        # We include dist 0 (exact match) and dist 32 (neighbors).
+        matches = np.where((dists_sq < 0.1) | (np.abs(dists_sq - 32.0) < 0.1))[0]
         
         results = []
-        for idx in matching_indices:
-            key = ",".join(map(str, occupied_keys_arr[idx]))
-            cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
+        for idx in matches:
+            cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (keys[idx],))
             results.extend(json.loads(cursor.fetchone()[0]))
-                    
+            
         return list(set(results))
 
     def close(self):
