@@ -13,9 +13,9 @@ Develop a foundational Python framework for E8 and Leech lattice structures to e
   - Implement vector normalization and symmetry operations. (Basic version done)
   - Develop the 8D (E8) and 24D (Leech) generators. (Done)
   - Implement Nearest Neighbor search (Quantization) for lattices. (NEXT)
-- **Day 6-8: Domain Applications**
-  - **AI:** Prototype a high-dimensional vector embedding mapper.
-  - **Crypto:** Implement a basic lattice-based key exchange concept.
+- **Day 6-8: Domain Applications (STARTED)**
+  - **AI:** Prototype a high-dimensional vector embedding mapper. (LEM Prototype built)
+  - **Crypto:** Implement a basic lattice-based key exchange concept. (Researching ML-KEM)
   - **Virtualization:** Test data density efficiency.
 - **Day 9-10: Optimization & Documentation**
   - Optimize bottlenecks using NumPy/Numba.
