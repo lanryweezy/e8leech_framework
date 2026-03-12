@@ -11,10 +11,9 @@ def test_data_density():
     num_vectors = 100
     dim = 24
     
-    # 1. Create raw 24D floating point vectors (standard AI embeddings)
-    # Scale raw data to be near the lattice origin for faster quantization
+    # Scale raw data to cover a wider space to get more unique centroids
     np.random.seed(42)
-    raw_data = (np.random.randn(num_vectors, dim) * 2.0).astype(np.float32)
+    raw_data = (np.random.randn(num_vectors, dim) * 5.0).astype(np.float32)
     raw_size = raw_data.nbytes
     
     # 2. Map to Leech Lattice points

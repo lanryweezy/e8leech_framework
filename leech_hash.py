@@ -16,7 +16,6 @@ class LeechHash:
         q = self.leech.quantify(vector)
         # Standardize key as integer tuple to avoid float precision issues in dict keys
         h = tuple(np.round(q).astype(int).tolist())
-        print(f"Indexing {label} at centroid {h[:6]}...")
         if h not in self.table:
             self.table[h] = []
         self.table[h].append(label)
@@ -30,7 +29,7 @@ class LeechHash:
     def lookup_neighborhood(self, vector):
         """ 
         Returns labels from the nearest lattice point AND its closest neighbors.
-        This increases recall for Locality Sensitive Hashing.
+        Optimized to only check occupied buckets.
         """
         central_q = self.leech.quantify(vector)
         results = []
@@ -42,17 +41,28 @@ class LeechHash:
         # 2. Get minimal vectors (neighbors)
         min_vecs = self.leech.get_minimal_vectors()
         
-        # 3. Check all neighbors for indexed items
-        # Optimization: In production, we'd use a more efficient sparse set check
-        for v in min_vecs:
-            # Check both directions
-            for neighbor_q in [central_q + v, central_q - v]:
-                neighbor_tuple = tuple(np.round(neighbor_q).astype(int).tolist())
-                labels = self.table.get(neighbor_tuple, [])
-                if labels:
-                    results.extend(labels)
+        # 3. Optimization for Scaling: 
+        # Instead of iterating 196k vectors, we check if table size warrants
+        # a different approach. For now, we iterate, but we could use a 
+        # KD-Tree on the table keys if the table grew to millions of buckets.
+        
+        # Pre-convert table keys to an array for vectorized math
+        if not self.table:
+            return []
             
-        return list(set(results)) # Deduplicate
+        table_keys = np.array(list(self.table.keys()))
+        
+        # Find keys that are exactly distance sqrt(32) away
+        # d^2 = 32
+        diffs = table_keys - central_q
+        dists_sq = np.sum(diffs**2, axis=1)
+        
+        neighbor_keys = table_keys[np.isclose(dists_sq, 32.0)]
+        
+        for nk in neighbor_keys:
+            results.extend(self.table.get(tuple(nk.tolist()), []))
+            
+        return list(set(results))
 
 if __name__ == "__main__":
     lh = LeechHash()

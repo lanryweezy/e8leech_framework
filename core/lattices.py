@@ -241,42 +241,19 @@ class LeechLattice(Lattice):
     def quantify(self, x):
         """ 
         Finds the closest point in the Leech Lattice to an arbitrary 24D vector x.
-        This implements a simplified version of the bounded distance decoder.
+        Optimized NumPy implementation for batch-like performance.
         """
-        # Construction B: Leech Lattice L is the union of 4096 cosets of 2*D_24.
-        # D_24 is the even weight lattice: {x in Z^24 | sum(x) is even}.
-        # Each coset corresponds to a Golay codeword c.
-        # L = Union_{c in G24} (2*c + 4*D_24) OR (2*c + 1 + 4*D_24*) ...
-        # Standard approach:
-        # 1. Scale x by 1/2.
-        # 2. For each Golay codeword c:
-        #    a. Find the closest point in Z^24 + c/2.
-        #    b. Check parity.
-        
-        # This is computationally expensive for a pure Python loop.
-        # For the prototype, we use a 'greedy' search among minimal vectors 
-        # around the nearest codeword-based point.
-        
-        # Scaling to help find the neighborhood
-        # Optimized lookup for batches: we can vectorize the distance check
-        # But for this demo, we'll use a slightly more focused sample
-        x_scaled = x / 2.0
-        # Only check a subset of codewords if we're doing mass quantization for speed
-        codewords = self.golay.get_all_codewords()
-        
-        # Optimization: Early exit for zero vectors or very small magnitude
+        if not hasattr(self, '_c2_cache'):
+            self._c2_cache = 2 * self.golay.get_all_codewords()
+            
         if np.linalg.norm(x) < 0.1:
             return np.zeros(24)
 
-        best_dist = float('inf')
-        best_p = None
+        # Vectorized candidate calculation (all 4096 at once)
+        p_candidates = 2 * np.round((x - self._c2_cache) / 4.0) * 2 + self._c2_cache
         
-        # Check all codewords to ensure geometric accuracy for LSH
-        for c in codewords:
-            p = 2 * np.round((x - 2 * c) / 4.0) * 2 + 2 * c
-            d = np.linalg.norm(x - p)
-            if d < best_dist:
-                best_dist = d
-                best_p = p
-                
-        return best_p
+        # Calculate Euclidean distances to all candidates
+        dists_sq = np.sum((x - p_candidates)**2, axis=1)
+        best_idx = np.argmin(dists_sq)
+        
+        return p_candidates[best_idx]
