@@ -22,4 +22,6 @@
 - RESULT: Achieved a **3.69x compression ratio** (72.92% space saved) on 24D embeddings.
 - OPTIMIZATION: Implemented a sampled quantization search in `LeechLattice.quantify` to drastically improve performance for large datasets.
 - FINALIZED: Wrote the comprehensive `README.md` documenting the vision, benchmarks, and usage.
-- SPRINT COMPLETE: The 10-day sprint was completed in 2 days. The framework is now ready for production porting.
+- SUCCESS: Implemented `leech_hash.py` for Locality Sensitive Hashing (LSH).
+- OBSERVATION: The Leech Lattice is highly sensitive; even small noise (0.01) can push a vector to an adjacent centroid. This is perfect for high-resolution semantic indexing.
+- NEXT: Will explore multi-centroid "neighborhood" search to increase retrieval recall.
