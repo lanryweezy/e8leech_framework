@@ -65,20 +65,20 @@ class LeechDB:
         Extreme throughput indexing for 1,000,000+ vectors.
         Uses a staging table and bulk SQL inserts to bypass row-by-row overhead.
         """
-        print(f"Staging {len(vectors)} vectors for bulk commit...")
+        print(f"Staging {len(vectors)} vectors for bulk commit...", flush=True)
         centroids = self.leech.quantify_batch(vectors)
         
         cursor = self.conn.cursor()
-        # 1. Create temporary staging table
+        print("Creating staging table...", flush=True)
         cursor.execute("CREATE TEMP TABLE staging (centroid_id TEXT, label TEXT)")
         
         # 2. Fast bulk insert into staging
+        print("Bulk inserting into staging...", flush=True)
         staging_data = [(self._centroid_to_key(c), l) for c, l in zip(centroids, labels)]
         cursor.executemany("INSERT INTO staging VALUES (?, ?)", staging_data)
         
         # 3. Merge staging into main buckets table using SQL group_by
-        # This moves the logic from Python loops into the SQLite engine (C)
-        print("Merging staging into production index...")
+        print("Merging staging into production index...", flush=True)
         cursor.execute("""
             INSERT INTO buckets (centroid_id, labels)
             SELECT centroid_id, json_group_array(label)
@@ -96,6 +96,7 @@ class LeechDB:
         """)
         cursor.execute("DROP TABLE staging")
         self.conn.commit()
+        print("Bulk commit successful.", flush=True)
 
     def query_exact(self, vector):
         centroid = self.leech.quantify(vector)
