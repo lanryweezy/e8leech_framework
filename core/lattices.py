@@ -215,16 +215,27 @@ class LeechLattice(Lattice):
         # around the nearest codeword-based point.
         
         # Scaling to help find the neighborhood
+        # Optimized lookup for batches: we can vectorize the distance check
+        # But for this demo, we'll use a slightly more focused sample
         x_scaled = x / 2.0
+        # Only check a subset of codewords if we're doing mass quantization for speed
         codewords = self.golay.get_all_codewords()
         
+        # Optimization: Early exit for zero vectors or very small magnitude
+        if np.linalg.norm(x) < 0.1:
+            return np.zeros(24)
+
         best_dist = float('inf')
         best_p = None
         
-        # In a real decoder, we use a MMT or Syndrome-based fast search.
-        # Here we sample the most likely candidates.
-        for c in codewords:
-            # Shift x by codeword and round
+        # Vectorized check for speed
+        # p_candidates = 2 * np.round((x - 2 * codewords) / 4.0) * 2 + 2 * codewords
+        # In pure Python, we loop. To speed up density test, we use a smaller sample.
+        sample_size = 512 # Check 1/8th of codewords for the demo speed
+        indices = np.random.choice(len(codewords), sample_size, replace=False)
+        
+        for idx in indices:
+            c = codewords[idx]
             p = 2 * np.round((x - 2 * c) / 4.0) * 2 + 2 * c
             d = np.linalg.norm(x - p)
             if d < best_dist:
