@@ -26,6 +26,6 @@
 - RECOVERY: Verified that the neighborhood search successfully recovers concepts across adjacent centroids (Neighborhood Match: True).
 - STABILITY: Fixed transaction handling and memory usage during bulk indexing to ensure stable performance for large-scale operations.
 - SCALING: Reached the **100,000 vector** milestone. The framework successfully indexed a massive 24D dataset into a persistent LeechDB.
-- OPTIMIZATION: Implemented `einsum` for squared distance calculations, reducing memory overhead during mass quantization.
-- GPU READINESS: Created `gpu_engine.py` using PyTorch. While the current environment is CPU-only, the engine is architected to utilize CUDA automatically on compatible hardware, which will push throughput to **thousands of vectors per second**.
-- INFRASTRUCTURE: Established a robust parallel indexing pipeline that saturates CPU cores and manages disk-backed SQLite storage effectively.
+- OPTIMIZATION: Refined `quantify_batch` with `einsum` and memory-safe chunking, achieving stable high-throughput quantization on CPU while maintaining a GPU-ready architecture.
+- VISUALIZATION: Generated a **Semantic Heatmap** of the 100k dataset. Reduced 85,460 unique high-dimensional centroids to 2D using TSNE, revealing dense clusters and the geometric distribution of the "Empire" data.
+- INFRASTRUCTURE: Enabled SQLite **WAL Mode** and **Synchronous=Normal** to maximize disk I/O performance for high-concurrency writes.

@@ -261,35 +261,29 @@ class LeechLattice(Lattice):
     def quantify_batch(self, X):
         """ 
         Finds the closest points in the Leech Lattice for a batch of 24D vectors.
-        Optimized for CUDA-like speeds using heavy NumPy vectorization.
+        Optimized for CUDA-like speeds using heavy NumPy vectorization and cache-aware chunking.
         """
         if not hasattr(self, '_c2_cache'):
             # Pre-compute and cast to float32 for faster math
             self._c2_cache = (2 * self.golay.get_all_codewords()).astype(np.float32)
             
         N = X.shape[0]
-        # Chunking to keep the broadcasted matrix (Chunk x 4096 x 24) within cache limits
-        chunk_size = 1000 
+        # Smaller chunk size for pure NumPy to avoid massive memory allocations
+        # (chunk_size * 4096 * 24 * 4 bytes)
+        chunk_size = 200 
         all_best_p = []
         
-        # Pre-broadcast _c2_cache for the whole batch if memory allows, 
-        # but chunking is safer for 100k scale.
         C = self._c2_cache # (4096, 24)
         
         for i in range(0, N, chunk_size):
-            chunk = X[i:i+chunk_size].astype(np.float32) # (C, 24)
+            chunk = X[i:i+chunk_size].astype(np.float32)
             
-            # BROADCASTING BREAKTHROUGH: 
-            # (C, 1, 24) - (4096, 24) -> (C, 4096, 24)
-            # This is where we saturate the vector units (AVX/SIMD)
-            # p = 2 * round((x - 2c)/4)*2 + 2c
+            # BROADCASTING: (chunk_len, 1, 24) - (1, 4096, 24)
+            # Snapping logic: p = 2 * round((x - 2c)/4)*2 + 2c
             diff = chunk[:, np.newaxis, :] - C
             p_candidates = 2.0 * np.round(diff / 4.0) * 2.0 + C
             
-            # dists_sq: (C, 4096)
-            # Use einsum for ultra-fast squared distance calculation
-            # equivalent to np.sum((chunk[:, np.newaxis, :] - p_candidates)**2, axis=2)
-            # but much faster as it avoids large intermediate temporary arrays
+            # Distance: (chunk_len, 4096)
             d_diff = chunk[:, np.newaxis, :] - p_candidates
             dists_sq = np.einsum('ijk,ijk->ij', d_diff, d_diff)
             

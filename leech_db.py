@@ -14,6 +14,9 @@ class LeechDB:
 
     def _setup_db(self):
         cursor = self.conn.cursor()
+        # Enable WAL mode for high-concurrency and faster writes
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS buckets (
                 centroid_id TEXT PRIMARY KEY,
