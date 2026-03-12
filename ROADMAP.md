@@ -8,11 +8,11 @@ Develop a foundational Python framework for E8 and Leech lattice structures to e
   - Deep dive into E8/Leech lattice basis vectors. (Research done)
   - Implement basic sphere packing algorithms. (Core logic drafted)
   - Research Python-based lattice libraries (fpylll, SageMath). (Done)
-- **Day 3-5: Core Engine**
-
-  - Build the `Lattice` class in Python.
-  - Implement vector normalization and symmetry operations.
-  - Develop the 8D (E8) and 24D (Leech) generators.
+- **Day 3-5: Core Engine (IN PROGRESS)**
+  - Build the `Lattice` class in Python. (Done)
+  - Implement vector normalization and symmetry operations. (Basic version done)
+  - Develop the 8D (E8) and 24D (Leech) generators. (Done)
+  - Implement Nearest Neighbor search (Quantization) for lattices. (NEXT)
 - **Day 6-8: Domain Applications**
   - **AI:** Prototype a high-dimensional vector embedding mapper.
   - **Crypto:** Implement a basic lattice-based key exchange concept.
