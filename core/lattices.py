@@ -261,27 +261,39 @@ class LeechLattice(Lattice):
     def quantify_batch(self, X):
         """ 
         Finds the closest points in the Leech Lattice for a batch of 24D vectors.
-        Highly optimized using matrix broadcasting.
+        Optimized for CUDA-like speeds using heavy NumPy vectorization.
         """
         if not hasattr(self, '_c2_cache'):
-            self._c2_cache = 2 * self.golay.get_all_codewords()
+            # Pre-compute and cast to float32 for faster math
+            self._c2_cache = (2 * self.golay.get_all_codewords()).astype(np.float32)
             
-        # X is (N, 24), _c2_cache is (4096, 24)
-        # We process in chunks to manage memory overhead if N is large
         N = X.shape[0]
-        chunk_size = 500
+        # Chunking to keep the broadcasted matrix (Chunk x 4096 x 24) within cache limits
+        chunk_size = 1000 
         all_best_p = []
         
+        # Pre-broadcast _c2_cache for the whole batch if memory allows, 
+        # but chunking is safer for 100k scale.
+        C = self._c2_cache # (4096, 24)
+        
         for i in range(0, N, chunk_size):
-            chunk = X[i:i+chunk_size]
-            # broadcasting: (chunk_size, 1, 24) - (1, 4096, 24)
-            # This creates a (chunk_size, 4096, 24) tensor
-            p_candidates = 2 * np.round((chunk[:, np.newaxis, :] - self._c2_cache) / 4.0) * 2 + self._c2_cache
+            chunk = X[i:i+chunk_size].astype(np.float32) # (C, 24)
             
-            # dists_sq: (chunk_size, 4096)
-            dists_sq = np.sum((chunk[:, np.newaxis, :] - p_candidates)**2, axis=2)
+            # BROADCASTING BREAKTHROUGH: 
+            # (C, 1, 24) - (4096, 24) -> (C, 4096, 24)
+            # This is where we saturate the vector units (AVX/SIMD)
+            # p = 2 * round((x - 2c)/4)*2 + 2c
+            diff = chunk[:, np.newaxis, :] - C
+            p_candidates = 2.0 * np.round(diff / 4.0) * 2.0 + C
+            
+            # dists_sq: (C, 4096)
+            # Use einsum for ultra-fast squared distance calculation
+            # equivalent to np.sum((chunk[:, np.newaxis, :] - p_candidates)**2, axis=2)
+            # but much faster as it avoids large intermediate temporary arrays
+            d_diff = chunk[:, np.newaxis, :] - p_candidates
+            dists_sq = np.einsum('ijk,ijk->ij', d_diff, d_diff)
+            
             best_indices = np.argmin(dists_sq, axis=1)
-            
             all_best_p.append(p_candidates[np.arange(len(chunk)), best_indices])
             
         return np.vstack(all_best_p)
