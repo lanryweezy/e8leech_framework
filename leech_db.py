@@ -57,6 +57,29 @@ class LeechDB:
         
         self.conn.commit()
 
+    def index_batch_precomputed(self, labels, centroids):
+        """Indexes labels when centroids are already calculated (Parallel Mode)."""
+        cursor = self.conn.cursor()
+        bucket_data = {}
+        for label, centroid in zip(labels, centroids):
+            key = self._centroid_to_key(centroid)
+            if key not in bucket_data:
+                bucket_data[key] = []
+            bucket_data[key].append(label)
+            
+        for key, new_labels in bucket_data.items():
+            cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
+            row = cursor.fetchone()
+            if row:
+                existing = json.loads(row[0])
+                updated = list(set(existing + new_labels))
+                cursor.execute("UPDATE buckets SET labels = ? WHERE centroid_id = ?", 
+                             (json.dumps(updated), key))
+            else:
+                cursor.execute("INSERT INTO buckets (centroid_id, labels) VALUES (?, ?)", 
+                             (key, json.dumps(new_labels)))
+        self.conn.commit()
+
     def query_exact(self, vector):
         centroid = self.leech.quantify(vector)
         key = self._centroid_to_key(centroid)
