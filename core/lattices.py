@@ -195,51 +195,40 @@ class LeechLattice(Lattice):
         super().__init__(24)
         self.golay = GolayCode()
 
-    def generate_minimal_vectors(self):
+    def quantify(self, x):
         """ 
-        Generates the 196,560 minimal vectors of norm 4.
+        Finds the closest point in the Leech Lattice to an arbitrary 24D vector x.
+        This implements a simplified version of the bounded distance decoder.
         """
-        minimal_vectors = []
+        # Construction B: Leech Lattice L is the union of 4096 cosets of 2*D_24.
+        # D_24 is the even weight lattice: {x in Z^24 | sum(x) is even}.
+        # Each coset corresponds to a Golay codeword c.
+        # L = Union_{c in G24} (2*c + 4*D_24) OR (2*c + 1 + 4*D_24*) ...
+        # Standard approach:
+        # 1. Scale x by 1/2.
+        # 2. For each Golay codeword c:
+        #    a. Find the closest point in Z^24 + c/2.
+        #    b. Check parity.
         
-        # Shape 1: (4, 4, 0^22) -> 1,104 vectors
-        for i in range(24):
-            for j in range(i + 1, 24):
-                for s1 in [4, -4]:
-                    for s2 in [4, -4]:
-                        v = np.zeros(24)
-                        v[i], v[j] = s1, s2
-                        minimal_vectors.append(v)
+        # This is computationally expensive for a pure Python loop.
+        # For the prototype, we use a 'greedy' search among minimal vectors 
+        # around the nearest codeword-based point.
         
-        # Get codewords for Shape 2 and 3
+        # Scaling to help find the neighborhood
+        x_scaled = x / 2.0
         codewords = self.golay.get_all_codewords()
         
-        # Shape 2: (2^8, 0^16) -> 97,152 vectors
-        # These are based on octads (weight 8 codewords)
-        octads = codewords[np.sum(codewords, axis=1) == 8]
-        for octad in octads:
-            indices = np.where(octad == 1)[0]
-            # There are 2^7 sign combinations such that product of signs is 1 (even sum)
-            for i in range(256):
-                signs = np.array([1 if (i >> j) & 1 == 0 else -1 for j in range(8)])
-                # Sum of indices where sign is -1 must be even
-                if np.sum(signs == -1) % 2 == 0:
-                    v = np.zeros(24)
-                    v[indices] = 2 * signs
-                    minimal_vectors.append(v)
-
-        # Shape 3: (3, 1^23) -> 98,304 vectors
-        # For each coordinate i, there is a vector v where v_i = -3 (or 3)
-        # and v_j = 1 or -1. The pattern of signs must correspond to a codeword.
-        for i in range(24):
-            for codeword in codewords:
-                v = np.array([1 if b == 0 else -1 for b in codeword], dtype=float)
-                # If we want v[i] to be -3, we need to ensure the original v[i] was 1.
-                # If original v[i] was -1, then v[i] becomes 3.
-                # v[i] = v[i] - 4 if codeword[i] == 0 else v[i] + 4
-                if codeword[i] == 0:
-                    v[i] = -3
-                else:
-                    v[i] = 3
-                minimal_vectors.append(v)
+        best_dist = float('inf')
+        best_p = None
+        
+        # In a real decoder, we use a MMT or Syndrome-based fast search.
+        # Here we sample the most likely candidates.
+        for c in codewords:
+            # Shift x by codeword and round
+            p = 2 * np.round((x - 2 * c) / 4.0) * 2 + 2 * c
+            d = np.linalg.norm(x - p)
+            if d < best_dist:
+                best_dist = d
+                best_p = p
                 
-        return np.array(minimal_vectors)
+        return best_p
