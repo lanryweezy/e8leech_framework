@@ -60,27 +60,41 @@ class LeechDB:
         
         self.conn.commit()
 
-    def index_batch_precomputed(self, labels, centroids):
-        """Indexes labels when centroids are already calculated (Parallel Mode)."""
+    def index_million_bulk(self, labels, vectors):
+        """
+        Extreme throughput indexing for 1,000,000+ vectors.
+        Uses a staging table and bulk SQL inserts to bypass row-by-row overhead.
+        """
+        print(f"Staging {len(vectors)} vectors for bulk commit...")
+        centroids = self.leech.quantify_batch(vectors)
+        
         cursor = self.conn.cursor()
-        bucket_data = {}
-        for label, centroid in zip(labels, centroids):
-            key = self._centroid_to_key(centroid)
-            if key not in bucket_data:
-                bucket_data[key] = []
-            bucket_data[key].append(label)
-            
-        for key, new_labels in bucket_data.items():
-            cursor.execute("SELECT labels FROM buckets WHERE centroid_id = ?", (key,))
-            row = cursor.fetchone()
-            if row:
-                existing = json.loads(row[0])
-                updated = list(set(existing + new_labels))
-                cursor.execute("UPDATE buckets SET labels = ? WHERE centroid_id = ?", 
-                             (json.dumps(updated), key))
-            else:
-                cursor.execute("INSERT INTO buckets (centroid_id, labels) VALUES (?, ?)", 
-                             (key, json.dumps(new_labels)))
+        # 1. Create temporary staging table
+        cursor.execute("CREATE TEMP TABLE staging (centroid_id TEXT, label TEXT)")
+        
+        # 2. Fast bulk insert into staging
+        staging_data = [(self._centroid_to_key(c), l) for c, l in zip(centroids, labels)]
+        cursor.executemany("INSERT INTO staging VALUES (?, ?)", staging_data)
+        
+        # 3. Merge staging into main buckets table using SQL group_by
+        # This moves the logic from Python loops into the SQLite engine (C)
+        print("Merging staging into production index...")
+        cursor.execute("""
+            INSERT INTO buckets (centroid_id, labels)
+            SELECT centroid_id, json_group_array(label)
+            FROM staging
+            GROUP BY centroid_id
+            ON CONFLICT(centroid_id) DO UPDATE SET
+                labels = (
+                    SELECT json_group_array(value)
+                    FROM (
+                        SELECT value FROM json_each(buckets.labels)
+                        UNION
+                        SELECT label FROM staging WHERE staging.centroid_id = buckets.centroid_id
+                    )
+                )
+        """)
+        cursor.execute("DROP TABLE staging")
         self.conn.commit()
 
     def query_exact(self, vector):

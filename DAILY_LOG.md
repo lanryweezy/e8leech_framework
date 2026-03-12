@@ -27,5 +27,7 @@
 - STABILITY: Fixed transaction handling and memory usage during bulk indexing to ensure stable performance for large-scale operations.
 - SCALING: Reached the **100,000 vector** milestone. The framework successfully indexed a massive 24D dataset into a persistent LeechDB.
 - OPTIMIZATION: Refined `quantify_batch` with `einsum` and memory-safe chunking, achieving stable high-throughput quantization on CPU while maintaining a GPU-ready architecture.
+- SEMANTIC ROUTING: Prototype `semantic_router.py` created. It uses lattice centroids as "Geometric Router Addresses" to direct AI queries to specialized expert models (MoE on the Lattice).
+- MILLION-VECTOR SCALE: Implemented `index_million_bulk` in `LeechDB`. It utilizes a temporary staging table and SQL-native grouping to move merge logic from Python into the C-optimized SQLite engine.
 - VISUALIZATION: Generated a **Semantic Heatmap** of the 100k dataset. Reduced 85,460 unique high-dimensional centroids to 2D using TSNE, revealing dense clusters and the geometric distribution of the "Empire" data.
 - INFRASTRUCTURE: Enabled SQLite **WAL Mode** and **Synchronous=Normal** to maximize disk I/O performance for high-concurrency writes.
